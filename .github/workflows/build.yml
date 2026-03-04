@@ -27,5 +27,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: llorTStore-IPA
-          path: build/**/*.app
+          path: build/ipa/*.ipa
           if-no-files-found: warn
