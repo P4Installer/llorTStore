@@ -16,11 +16,17 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade flet requests
+          # Создаем патч для исправления ошибки 'unicode'
+          site_packages=$(python3 -m site --user-site)
+          mkdir -p "$site_packages"
+          echo "import builtins; builtins.unicode = str" > "$site_packages/sitecustomize.py"
 
       - name: Build App
         run: |
-          # Гарантируем, что система видит flet из Python 3.11
+          # Убеждаемся, что бинарники flet в PATH
           export PATH="$PATH:$(python3 -m site --user-base)/bin"
+          
+          # Пропускаем flet doctor, если это возможно, или надеемся на патч выше
           flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore
 
       - name: Upload Build
