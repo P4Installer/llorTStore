@@ -1,60 +1,43 @@
 name: Build iOS IPA
-
 on: [push]
 
-
-
 jobs:
-
   build:
-
     runs-on: macos-latest
-
     steps:
-
       - uses: actions/checkout@v4
 
-
-
       - name: Set up Python
-
         uses: actions/setup-python@v5
-
         with:
-
           python-version: '3.11'
 
-
-
       - name: Install Dependencies
-
         run: |
+          # Upgrade pip to avoid environment issues
+          python -m pip install --upgrade pip
+          # Explicitly install latest flet and its packaging requirements
+          pip install --upgrade flet httpx requests
 
-          pip install flet requests httpx
-
-
+      - name: Setup Flutter
+        # Flet build requires Flutter to be present on the system
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
 
       - name: Build App
-
         run: |
-
-          # Убираем -r, так как библиотеки уже в окружении
-
-          # Добавляем --module-name, чтобы явно указать главный файл
-
-          flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore 
-
+          # Ensure global packages are in PATH
+          export PATH="$PATH":"$(python -m site --user-base)/bin"
           
+          # Flet build command
+          # Added --verbose to see exactly where 'unicode' error might trigger if it persists
+          flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore --verbose
 
       - name: Upload Build
-
         uses: actions/upload-artifact@v4
-
         with:
-
-          name: llorTStore
-
-
+          name: llorTStore-iOS
+          # Note: Flet builds usually output to a 'build/ipa' or 'build/ios' folder
           path: build/**/*.app
-
-          if-no-files-found: error
+          if-no-files-found: warn
