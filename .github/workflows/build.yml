@@ -1,40 +1,61 @@
 name: Build iOS IPA
+
 on: [push]
 
+
+
 jobs:
+
   build:
+
     runs-on: macos-latest
+
     steps:
+
       - uses: actions/checkout@v4
 
+
+
       - name: Set up Python
+
         uses: actions/setup-python@v5
+
         with:
+
           python-version: '3.11'
 
+
+
       - name: Install Dependencies
+
         run: |
-          python3 -m pip install --upgrade pip
-          # Устанавливаем совместимые версии, чтобы избежать конфликтов urllib3 и ошибок кодировки
-          python3 -m pip install "urllib3<2" "requests==2.31.0" flet
+
+          pip install flet requests
+
+
 
       - name: Build App
+
         run: |
-          # Фикс для ошибки "str() argument 'encoding' must be str"
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
-          export PYTHONUTF8=1
+
+          # Убираем -r, так как библиотеки уже в окружении
+
+          # Добавляем --module-name, чтобы явно указать главный файл
+
+          flet build ipa --yes --product "llorTStore" --org com.p4team.llorTStore 
+
           
-          # Убеждаемся, что путь к flet добавлен в систему
-          export PATH="$PATH:$(python3 -m site --user-base)/bin"
-          
-          # Запуск сборки с принудительным подтверждением
-          flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore
 
       - name: Upload Build
+
         uses: actions/upload-artifact@v4
+
         with:
-          name: llorTStore-IPA
-          # Если flet положит файл в другую подпапку, этот путь его найдет
-          path: build/ipa/*.ipa
-          if-no-files-found: warn
+
+          name: TrollRev-IPA
+
+          # На твоем скриншоте (image_7f59bd) путь был build/ipa
+
+          path: build/**/*.app
+
+          if-no-files-found: error
