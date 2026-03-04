@@ -1,6 +1,5 @@
 import flet as ft
-import httpx
-import asyncio
+import urllib.request
 import time
 import json
 import os
@@ -17,13 +16,13 @@ DEFAULT_REPOS = ["https://raw.githubusercontent.com/P4Installer/asda/main/repo.j
 PROXY_ESIGN_URL = "https://applejr.net/post/esignpwerchina.plist"
 SAVE_FILE = "repos_config.json"
 
-async def main(page: ft.Page):
+def main(page: ft.Page):
     page.title = "TrollStore"
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = IOS_BG
     page.padding = 0
     
-    # Custom SF Pro-like font (Inter is very similar)
+    # Шрифт Inter (аналог SF Pro)
     page.fonts = {
         "SF Pro": "https://github.com/google/fonts/raw/main/ofl/inter/Inter-VariableFont_slnt%2Cwght.ttf",
     }
@@ -38,12 +37,11 @@ async def main(page: ft.Page):
             except: return []
         return []
 
-    async def open_url(url):
-        await page.launch_url(url)
+    def open_url(url):
+        page.launch_url(url)
 
-    # iOS 18 Style App Tile
     def create_app_tile(name, desc, color, url, is_last=False):
-        # FIXED: Using ft.Alignment(0, 0) for center alignment
+        # Исправлено: ft.Alignment(0, 0) вместо ft.alignment.center
         icon = ft.Container(
             content=ft.Text(name[0].upper(), weight="bold", size=22, color="white"),
             width=54, height=54, border_radius=12, alignment=ft.Alignment(0, 0)
@@ -51,8 +49,8 @@ async def main(page: ft.Page):
         
         if isinstance(color, list):
             icon.gradient = ft.LinearGradient(
-                begin=ft.Alignment(-1, -1), # top_left
-                end=ft.Alignment(1, 1),    # bottom_right
+                begin=ft.Alignment(-1, -1),
+                end=ft.Alignment(1, 1),
                 colors=color
             )
         else:
@@ -68,12 +66,12 @@ async def main(page: ft.Page):
                 ft.Container(
                     content=ft.Text("GET", color=IOS_BLUE, weight="bold", size=13),
                     bgcolor="#2c2c2e", 
-                    padding=ft.padding.only(left=16, right=16, top=6, bottom=6), 
+                    padding=ft.Padding(16, 6, 16, 6), 
                     border_radius=18,
-                    on_click=lambda e: page.run_task(open_url, url)
+                    on_click=lambda _: open_url(url)
                 )
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-            padding=ft.padding.only(top=10, bottom=10)
+            padding=ft.Padding(0, 10, 0, 10)
         )
         
         if not is_last:
@@ -83,19 +81,17 @@ async def main(page: ft.Page):
     repo_apps_list = ft.Column(spacing=0)
     repo_sources_list = ft.Column(spacing=0)
 
-    # Apps View
     apps_view = ft.Column(
         scroll=ft.ScrollMode.HIDDEN,
         expand=True,
         controls=[
-            # FIXED: Proper Margin usage
-            ft.Text("Apps", size=34, weight="bold", margin=ft.padding.only(top=40, bottom=10)),
-            ft.Text("SYSTEM", size=13, color=IOS_GRAY, margin=ft.padding.only(left=10, bottom=5)),
+            ft.Container(ft.Text("Apps", size=34, weight="bold"), padding=ft.Padding(0, 40, 0, 10)),
+            ft.Container(ft.Text("SYSTEM", size=13, color=IOS_GRAY), padding=ft.Padding(10, 0, 0, 5)),
             ft.Container(
                 content=ft.Column([
                     create_app_tile("ESign", "Signed Proxy Installer", ["#5856d6", "#007AFF"], f"itms-services://?action=download-manifest&url={PROXY_ESIGN_URL}", True)
                 ], spacing=0),
-                bgcolor=IOS_CARD, border_radius=12, padding=ft.padding.symmetric(horizontal=15)
+                bgcolor=IOS_CARD, border_radius=12, padding=ft.Padding(15, 0, 15, 0)
             ),
             ft.Container(height=10),
             repo_apps_list,
@@ -103,7 +99,6 @@ async def main(page: ft.Page):
         ]
     )
 
-    # Sources View
     repo_input = ft.TextField(
         hint_text="Enter repository URL", 
         expand=True, 
@@ -119,19 +114,19 @@ async def main(page: ft.Page):
         expand=True, 
         visible=False,
         controls=[
-            ft.Text("Sources", size=34, weight="bold", margin=ft.padding.only(top=40, bottom=10)),
+            ft.Container(ft.Text("Sources", size=34, weight="bold"), padding=ft.Padding(0, 40, 0, 10)),
             ft.Row([
                 repo_input, 
-                ft.IconButton(ft.Icons.ADD_CIRCLE, on_click=lambda e: page.run_task(add_repo_click), icon_color=IOS_BLUE, icon_size=30)
+                ft.IconButton(ft.Icons.ADD_CIRCLE, on_click=lambda e: add_repo_click(e), icon_color=IOS_BLUE, icon_size=30)
             ]),
             ft.Container(height=20),
-            ft.Text("INSTALLED REPOS", size=13, color=IOS_GRAY, margin=ft.padding.only(left=10, bottom=5)),
+            ft.Container(ft.Text("INSTALLED REPOS", size=13, color=IOS_GRAY), padding=ft.Padding(10, 0, 0, 5)),
             ft.Container(repo_sources_list, bgcolor=IOS_CARD, border_radius=12),
             ft.Container(height=120)
         ]
     )
 
-    async def load_repos():
+    def fetch_repo_data():
         repo_apps_list.controls = [ft.Container(ft.ProgressRing(color=IOS_BLUE), alignment=ft.Alignment(0, 0), padding=40)]
         page.update()
 
@@ -139,52 +134,44 @@ async def main(page: ft.Page):
         loaded_apps = []
         loaded_sources = []
 
-        async with httpx.AsyncClient() as client:
-            tasks = [client.get(f"{u}?t={int(time.time())}", timeout=5.0) for u in all_urls]
-            for i, task in enumerate(asyncio.as_completed(tasks)):
-                try:
-                    resp = await task
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        url = str(resp.url).split('?')[0]
-                        
-                        loaded_sources.append(ft.Column([
-                            ft.ListTile(
-                                leading=ft.Icon(ft.Icons.LANGUAGE, color=IOS_BLUE),
-                                title=ft.Text(url, size=14, color="white", no_wrap=True, overflow="ellipsis"),
-                                trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, color=IOS_DIVIDER),
-                                dense=True
-                            ),
-                            ft.Divider(height=1, color=IOS_DIVIDER, thickness=0.5)
-                        ], spacing=0))
+        for url in all_urls:
+            try:
+                req_url = f"{url}?t={int(time.time())}"
+                with urllib.request.urlopen(req_url, timeout=5) as response:
+                    data = json.loads(response.read().decode())
+                    
+                    loaded_sources.append(ft.Column([
+                        ft.ListTile(
+                            leading=ft.Icon(ft.Icons.LANGUAGE, color=IOS_BLUE),
+                            title=ft.Text(url, size=14, color="white", no_wrap=True, overflow="ellipsis"),
+                            trailing=ft.Icon(ft.Icons.CHEVRON_RIGHT, color=IOS_DIVIDER),
+                        ),
+                        ft.Divider(height=1, color=IOS_DIVIDER, thickness=0.5)
+                    ], spacing=0))
 
-                        if "packages" in data:
-                            loaded_apps.append(ft.Text(data.get("repo_name", "Third-party").upper(), size=13, color=IOS_GRAY, margin=ft.padding.only(left=10, top=20, bottom=5)))
-                            pkgs = data["packages"]
-                            repo_container = ft.Column([
-                                create_app_tile(p['name'], p['description'], p.get("color"), p['url'], j==len(pkgs)-1) 
-                                for j, p in enumerate(pkgs)
-                            ], spacing=0)
-                            loaded_apps.append(ft.Container(content=repo_container, bgcolor=IOS_CARD, border_radius=12, padding=ft.padding.symmetric(horizontal=15)))
-                        
-                        repo_apps_list.controls = loaded_apps
-                        repo_sources_list.controls = loaded_sources
-                        page.update()
-                except: continue
+                    if "packages" in data:
+                        loaded_apps.append(ft.Container(ft.Text(data.get("repo_name", "Third-party").upper(), size=13, color=IOS_GRAY), padding=ft.Padding(10, 20, 0, 5)))
+                        pkgs = data["packages"]
+                        repo_container = ft.Column([
+                            create_app_tile(p['name'], p['description'], p.get("color"), p['url'], j==len(pkgs)-1) 
+                            for j, p in enumerate(pkgs)
+                        ], spacing=0)
+                        loaded_apps.append(ft.Container(content=repo_container, bgcolor=IOS_CARD, border_radius=12, padding=ft.Padding(15, 0, 15, 0)))
+            except Exception as e:
+                print(f"Error loading {url}: {e}")
 
-        if not loaded_apps:
-            repo_apps_list.controls = [ft.Container(ft.Text("No sources found", color=IOS_GRAY), alignment=ft.Alignment(0, 0), padding=40)]
-            page.update()
+        repo_apps_list.controls = loaded_apps if loaded_apps else [ft.Container(ft.Text("No sources found", color=IOS_GRAY), alignment=ft.Alignment(0, 0), padding=40)]
+        repo_sources_list.controls = loaded_sources
+        page.update()
 
-    async def add_repo_click(e):
+    def add_repo_click(e):
         u = repo_input.value.strip()
         if u and u not in user_repos:
             user_repos.append(u)
             with open(SAVE_FILE, "w") as f: json.dump(user_repos, f)
             repo_input.value = ""
-            await load_repos()
+            page.run_thread(fetch_repo_data)
 
-    # Navigation Bar
     page.navigation_bar = ft.NavigationBar(
         bgcolor=IOS_SECONDARY_BG,
         selected_index=0,
@@ -206,14 +193,14 @@ async def main(page: ft.Page):
         ft.SafeArea(
             ft.Container(
                 content=ft.Stack([apps_view, sources_view], expand=True),
-                padding=ft.padding.symmetric(horizontal=20),
+                padding=ft.Padding(20, 0, 20, 0),
                 expand=True
             ),
             expand=True
         )
     )
     
-    asyncio.create_task(load_repos())
+    page.run_thread(fetch_repo_data)
 
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(main) # Используем актуальный ft.run()
