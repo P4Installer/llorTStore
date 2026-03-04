@@ -1,61 +1,33 @@
 name: Build iOS IPA
-
 on: [push]
 
-
-
 jobs:
-
   build:
-
     runs-on: macos-latest
-
     steps:
-
       - uses: actions/checkout@v4
 
-
-
       - name: Set up Python
-
         uses: actions/setup-python@v5
-
         with:
-
           python-version: '3.11'
 
-
-
       - name: Install Dependencies
-
         run: |
-
-          pip install flet requests
-
-
+          # Обновляем pip и устанавливаем последние версии flet и requests
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade flet requests
 
       - name: Build App
-
         run: |
-
-          # Убираем -r, так как библиотеки уже в окружении
-
-          # Добавляем --module-name, чтобы явно указать главный файл
-
-          flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore 
-
-          
+          # Используем python3 -m flet для уверенности, что используется нужный интерпретатор
+          python3 -m flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore
 
       - name: Upload Build
-
         uses: actions/upload-artifact@v4
-
         with:
-
           name: llorTStore-IPA
-
-          # На твоем скриншоте (image_7f59bd) путь был build/ipa
-
+          # flet build ipa обычно складывает результат в build/ipa
+          # Указываем путь более точно для поиска .ipa или .app
           path: build/**/*.app
-
           if-no-files-found: error
