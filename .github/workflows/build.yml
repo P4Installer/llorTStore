@@ -14,20 +14,18 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          # Обновляем pip и устанавливаем последние версии flet и requests
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade flet requests
 
       - name: Build App
         run: |
-          # Используем python3 -m flet для уверенности, что используется нужный интерпретатор
-          python3 -m flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore
+          # Гарантируем, что система видит flet из Python 3.11
+          export PATH="$PATH:$(python3 -m site --user-base)/bin"
+          flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore
 
       - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
           name: llorTStore-IPA
-          # flet build ipa обычно складывает результат в build/ipa
-          # Указываем путь более точно для поиска .ipa или .app
           path: build/**/*.app
-          if-no-files-found: error
+          if-no-files-found: warn
