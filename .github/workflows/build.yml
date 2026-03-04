@@ -15,23 +15,26 @@ jobs:
       - name: Install Dependencies
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install --upgrade flet requests
-          # Создаем патч для исправления ошибки 'unicode'
-          site_packages=$(python3 -m site --user-site)
-          mkdir -p "$site_packages"
-          echo "import builtins; builtins.unicode = str" > "$site_packages/sitecustomize.py"
+          # Устанавливаем совместимые версии, чтобы избежать конфликтов urllib3 и ошибок кодировки
+          python3 -m pip install "urllib3<2" "requests==2.31.0" flet
 
       - name: Build App
         run: |
-          # Убеждаемся, что бинарники flet в PATH
+          # Фикс для ошибки "str() argument 'encoding' must be str"
+          export LANG=en_US.UTF-8
+          export LC_ALL=en_US.UTF-8
+          export PYTHONUTF8=1
+          
+          # Убеждаемся, что путь к flet добавлен в систему
           export PATH="$PATH:$(python3 -m site --user-base)/bin"
           
-          # Пропускаем flet doctor, если это возможно, или надеемся на патч выше
+          # Запуск сборки с принудительным подтверждением
           flet build ipa --yes --product "llorTStore" --org com.p4.llorTStore
 
       - name: Upload Build
         uses: actions/upload-artifact@v4
         with:
           name: llorTStore-IPA
+          # Если flet положит файл в другую подпапку, этот путь его найдет
           path: build/ipa/*.ipa
           if-no-files-found: warn
