@@ -1,0 +1,30 @@
+{
+  "repo_name": "P4Tweaks DEFAULT REPO",
+  "packages": [
+    {
+      "name": "ESign Installer",
+      "description": "Ipa installer",
+      "color": "#302eb3",
+      "url": "itms-services://?action=download-manifest&url=https://applejr.net/post/esignpwerchina.plist"
+    },
+    {
+      "name": "Minecraft",
+      "description": "v1.21.131 Full Version",
+      "color": "#2c8a32",
+      "url": "https://file.ipaomtk.com/Minecraft/Minecraft-v1.21.131-IPAOMTK.COM.ipa"
+    }
+  ]
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
