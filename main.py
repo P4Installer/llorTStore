@@ -9,7 +9,7 @@ IOS_BG = "#000000"
 IOS_CARD = "#1C1C1E"
 IOS_BLUE = "#007AFF"
 IOS_GRAY = "#8E8E93"
-IOS_SECONDARY_BG = "#161617"
+IOS_SECONDARY_BG = "#161617" 
 IOS_DIVIDER = "#38383A"
 
 DEFAULT_REPOS = ["https://raw.githubusercontent.com/P4Installer/asda/main/repo.json"]
@@ -22,7 +22,6 @@ def main(page: ft.Page):
     page.bgcolor = IOS_BG
     page.padding = 0
     
-    # Шрифт Inter (аналог SF Pro)
     page.fonts = {
         "SF Pro": "https://github.com/google/fonts/raw/main/ofl/inter/Inter-VariableFont_slnt%2Cwght.ttf",
     }
@@ -41,10 +40,10 @@ def main(page: ft.Page):
         page.launch_url(url)
 
     def create_app_tile(name, desc, color, url, is_last=False):
-        # Исправлено: ft.Alignment(0, 0) вместо ft.alignment.center
         icon = ft.Container(
             content=ft.Text(name[0].upper(), weight="bold", size=22, color="white"),
-            width=54, height=54, border_radius=12, alignment=ft.Alignment(0, 0)
+            width=54, height=54, border_radius=12, 
+            alignment=ft.Alignment(0, 0) 
         )
         
         if isinstance(color, list):
@@ -95,7 +94,7 @@ def main(page: ft.Page):
             ),
             ft.Container(height=10),
             repo_apps_list,
-            ft.Container(height=120)
+            ft.Container(height=80) 
         ]
     )
 
@@ -121,8 +120,8 @@ def main(page: ft.Page):
             ]),
             ft.Container(height=20),
             ft.Container(ft.Text("INSTALLED REPOS", size=13, color=IOS_GRAY), padding=ft.Padding(10, 0, 0, 5)),
-            ft.Container(repo_sources_list, bgcolor=IOS_CARD, border_radius=12),
-            ft.Container(height=120)
+            ft.Container(repo_sources_list, bgcolor=IOS_CARD, border_radius=12, padding=ft.Padding(15, 0, 15, 0)),
+            ft.Container(height=80)
         ]
     )
 
@@ -172,35 +171,61 @@ def main(page: ft.Page):
             repo_input.value = ""
             page.run_thread(fetch_repo_data)
 
-    page.navigation_bar = ft.NavigationBar(
+    def switch_tab(index):
+        apps_view.visible = (index == 0)
+        sources_view.visible = (index == 1)
+        for i, item in enumerate(nav_items.controls):
+            is_selected = (i == index)
+            item.content.controls[0].color = IOS_BLUE if is_selected else IOS_GRAY
+            item.content.controls[1].color = IOS_BLUE if is_selected else IOS_GRAY
+        page.update()
+
+    def nav_item(icon, label, index):
+        return ft.Container(
+            content=ft.Column([
+                ft.Icon(icon, size=23, color=IOS_GRAY),
+                ft.Text(label, size=10, weight="w500", color=IOS_GRAY)
+            ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=1),
+            on_click=lambda _: switch_tab(index),
+            expand=True,
+            height=65
+        )
+
+    nav_items = ft.Row([
+        nav_item(ft.Icons.GRID_VIEW_ROUNDED, "Apps", 0),
+        nav_item(ft.Icons.FORMAT_LIST_BULLETED_ROUNDED, "Sources", 1)
+    ], alignment=ft.MainAxisAlignment.CENTER, spacing=0)
+
+    nav_items.controls[0].content.controls[0].color = IOS_BLUE
+    nav_items.controls[0].content.controls[1].color = IOS_BLUE
+
+    ios_tab_bar = ft.Container(
+        content=nav_items,
         bgcolor=IOS_SECONDARY_BG,
-        selected_index=0,
-        indicator_color=ft.Colors.TRANSPARENT,
-        destinations=[
-            ft.NavigationBarDestination(icon=ft.Icons.GRID_VIEW_ROUNDED, label="Apps"),
-            ft.NavigationBarDestination(icon=ft.Icons.FORMAT_LIST_BULLETED_ROUNDED, label="Sources"),
-        ],
-        on_change=lambda e: (
-            setattr(apps_view, 'visible', e.control.selected_index == 0), 
-            setattr(sources_view, 'visible', e.control.selected_index == 1), 
-            page.update()
-        ),
+        height=65,
+        padding=0,
+        border=ft.Border(top=ft.BorderSide(0.5, IOS_DIVIDER)),
     )
 
     user_repos.extend(load_from_file())
     
     page.add(
-        ft.SafeArea(
-            ft.Container(
-                content=ft.Stack([apps_view, sources_view], expand=True),
-                padding=ft.Padding(20, 0, 20, 0),
+        ft.Stack([
+            ft.SafeArea(
+                ft.Container(
+                    content=ft.Stack([apps_view, sources_view]),
+                    padding=ft.Padding(20, 0, 20, 0),
+                    expand=True
+                ),
                 expand=True
             ),
-            expand=True
-        )
+            ft.Container(
+                content=ios_tab_bar,
+                alignment=ft.Alignment(0, 1),
+            )
+        ], expand=True)
     )
-    
     page.run_thread(fetch_repo_data)
 
 if __name__ == "__main__":
-    ft.run(main) # Используем актуальный ft.run()
+    ft.run(main)
